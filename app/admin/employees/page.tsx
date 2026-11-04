@@ -175,7 +175,8 @@ export default function AdminEmployeesPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Profile | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
-  const [viewTarget, setViewTarget] = useState<Profile | null>(null);
+  const [viewTarget, setViewTarget] = useState<
+  (Profile & { departments: Department | null }) | null>(null);
   const [viewAttendance, setViewAttendance] = useState<Attendance[]>([]);
   const [viewLeaves, setViewLeaves] = useState<LeaveRequest[]>([]);
   const [saving, setSaving] = useState(false);
@@ -321,8 +322,10 @@ export default function AdminEmployeesPage() {
     fetchEmployees();
   };
 
-  const viewDetails = async (emp: Profile) => {
-    setViewTarget(emp);
+  const viewDetails = async (
+  emp: Profile & { departments: Department | null }
+) => {
+  setViewTarget(emp);
     const [attRes, leaveRes] = await Promise.all([
       supabase.from('attendance').select('*').eq('user_id', emp.id).order('date', { ascending: false }).limit(10),
       supabase.from('leave_requests').select('*, leave_types(name)').eq('user_id', emp.id).order('created_at', { ascending: false }).limit(10),

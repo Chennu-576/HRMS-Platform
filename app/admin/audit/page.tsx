@@ -130,9 +130,11 @@ const ActionDistribution = ({ logs }: { logs: any[] }) => {
     return acc;
   }, {});
   
-  const sorted = Object.entries(actionCounts)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 6);
+ const sorted = (
+  Object.entries(actionCounts) as [string, number][]
+)
+  .sort((a, b) => b[1] - a[1])
+  .slice(0, 6);
   
   const maxCount = sorted.length > 0 ? sorted[0][1] : 1;
   

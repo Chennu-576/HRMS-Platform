@@ -119,7 +119,15 @@ const SeasonalHero = ({ holidays, upcoming }: { holidays: Holiday[], upcoming: H
 // ==============================================
 // 2. HOLIDAY MONTH GRID - UNIQUE LAYOUT
 // ==============================================
-const HolidayMonthGrid = ({ holidays }: { holidays: Holiday[] }) => {
+const HolidayMonthGrid = ({
+  holidays,
+  onEdit,
+  onDelete,
+}: {
+  holidays: Holiday[];
+  onEdit: (holiday: Holiday) => void;
+  onDelete: (id: string) => void;
+}) => {
   const groupedByMonth = holidays.reduce((acc: any, holiday) => {
     const month = format(parseISO(holiday.date), 'MMMM');
     if (!acc[month]) acc[month] = [];
@@ -219,7 +227,7 @@ const HolidayMonthGrid = ({ holidays }: { holidays: Holiday[] }) => {
                         size="icon" 
                         variant="ghost" 
                         className="h-6 w-6 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50"
-                        onClick={() => openEdit(holiday)}
+                        onClick={() => onEdit(holiday)}
                       >
                         <Edit className="h-3 w-3" />
                       </Button>
@@ -227,7 +235,7 @@ const HolidayMonthGrid = ({ holidays }: { holidays: Holiday[] }) => {
                         size="icon" 
                         variant="ghost" 
                         className="h-6 w-6 text-slate-400 hover:text-rose-600 hover:bg-rose-50"
-                        onClick={() => setDeleteTarget(holiday.id)}
+                        onClick={() => onDelete(holiday.id)}
                       >
                         <Trash2 className="h-3 w-3" />
                       </Button>
@@ -529,7 +537,11 @@ export default function AdminHolidaysPage() {
           </div>
         </div>
         <div className="p-6">
-          <HolidayMonthGrid holidays={holidays} />
+          <HolidayMonthGrid
+  holidays={holidays}
+  onEdit={openEdit}
+  onDelete={setDeleteTarget}
+/>
         </div>
       </div>
 
@@ -588,222 +600,3 @@ export default function AdminHolidaysPage() {
 }
 
 
-// 'use client';
-
-// import { useEffect, useState } from 'react';
-// import { useAuth } from '@/lib/auth-context';
-// import { supabase } from '@/lib/supabase/client';
-// import { PageHeader } from '@/components/shared/page-header';
-// import { StatCard } from '@/components/shared/stat-card';
-// import { SectionCard } from '@/components/shared/section-card';
-// import { HolidayTypeBadge } from '@/components/shared/badges';
-// import { Button } from '@/components/ui/button';
-// import { Input } from '@/components/ui/input';
-// import { Label } from '@/components/ui/label';
-// import { Textarea } from '@/components/ui/textarea';
-// import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-// import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-// import { ConfirmDialog } from '@/components/shared/confirm-dialog';
-// import { CalendarOff, Plus, Edit, Trash2, Globe, Building2 } from 'lucide-react';
-// import { useForm } from 'react-hook-form';
-// import { zodResolver } from '@hookform/resolvers/zod';
-// import { holidaySchema, type HolidayValues } from '@/lib/validation/schemas';
-// import { toast } from 'sonner';
-// import { motion } from 'framer-motion';
-// import { format, parseISO } from 'date-fns';
-// import type { Holiday } from '@/lib/types';
-
-// export default function AdminHolidaysPage() {
-//   const { user: admin } = useAuth();
-//   const [holidays, setHolidays] = useState<Holiday[]>([]);
-//   const [loading, setLoading] = useState(true);
-//   const [dialogOpen, setDialogOpen] = useState(false);
-//   const [editTarget, setEditTarget] = useState<Holiday | null>(null);
-//   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
-//   const [saving, setSaving] = useState(false);
-
-//   const {
-//     register,
-//     handleSubmit,
-//     reset,
-//     setValue,
-//     watch,
-//     formState: { errors },
-//   } = useForm<HolidayValues>({
-//     resolver: zodResolver(holidaySchema),
-//   });
-
-//   const selectedType = watch('type');
-
-//   const fetchHolidays = async () => {
-//     const { data } = await supabase.from('holidays').select('*').order('date', { ascending: true });
-//     if (data) setHolidays(data as Holiday[]);
-//     setLoading(false);
-//   };
-
-//   useEffect(() => {
-//     fetchHolidays();
-//   }, []);
-
-//   const openAdd = () => {
-//     setEditTarget(null);
-//     reset({ name: '', date: '', type: 'public', description: '' });
-//     setDialogOpen(true);
-//   };
-
-//   const openEdit = (h: Holiday) => {
-//     setEditTarget(h);
-//     reset({ name: h.name, date: h.date, type: h.type, description: h.description });
-//     setDialogOpen(true);
-//   };
-
-//   const onSubmit = async (values: HolidayValues) => {
-//     setSaving(true);
-//     try {
-//       if (editTarget) {
-//         const { error } = await supabase
-//           .from('holidays')
-//           .update({ name: values.name, date: values.date, type: values.type, description: values.description || '' })
-//           .eq('id', editTarget.id);
-//         if (error) throw error;
-//         if (admin) await supabase.from('audit_log').insert({ actor_id: admin.id, action: 'update_holiday', target_type: 'holiday', target_id: editTarget.id, metadata: { name: values.name } });
-//         toast.success('Holiday updated.');
-//       } else {
-//         const { error } = await supabase
-//           .from('holidays')
-//           .insert({ name: values.name, date: values.date, type: values.type, description: values.description || '' });
-//         if (error) throw error;
-//         if (admin) await supabase.from('audit_log').insert({ actor_id: admin.id, action: 'create_holiday', target_type: 'holiday', target_id: '', metadata: { name: values.name } });
-//         toast.success('Holiday created.');
-//       }
-//       setDialogOpen(false);
-//       fetchHolidays();
-//     } catch (err: any) {
-//       toast.error(err.message || 'Failed');
-//     } finally {
-//       setSaving(false);
-//     }
-//   };
-
-//   const handleDelete = async () => {
-//     if (!deleteTarget || !admin) return;
-//     try {
-//       const { error } = await supabase.from('holidays').delete().eq('id', deleteTarget);
-//       if (error) throw error;
-//       await supabase.from('audit_log').insert({ actor_id: admin.id, action: 'delete_holiday', target_type: 'holiday', target_id: deleteTarget });
-//       toast.success('Holiday deleted.');
-//       fetchHolidays();
-//     } catch (err: any) {
-//       toast.error(err.message || 'Failed');
-//     } finally {
-//       setDeleteTarget(null);
-//     }
-//   };
-
-//   const publicCount = holidays.filter(h => h.type === 'public').length;
-//   const companyCount = holidays.filter(h => h.type === 'company').length;
-
-//   if (loading) return <div className="space-y-6"><div className="h-8 w-64 animate-pulse rounded bg-slate-200" /></div>;
-
-//   return (
-//     <div className="space-y-6">
-//       <PageHeader title="Holiday Management" description="Manage public and company holidays"
-//         action={<Button size="sm" onClick={openAdd}><Plus className="mr-2 h-4 w-4" /> Add Holiday</Button>} />
-
-//       <div className="grid gap-4 sm:grid-cols-3">
-//         <StatCard label="Total Holidays" value={holidays.length} icon={CalendarOff} accent="blue" delay={0} />
-//         <StatCard label="Public" value={publicCount} icon={Globe} accent="rose" delay={0.05} />
-//         <StatCard label="Company" value={companyCount} icon={Building2} accent="teal" delay={0.1} />
-//       </div>
-
-//       <SectionCard title={`Holidays in ${new Date().getFullYear()}`}>
-//         <div className="space-y-2">
-//           {holidays.length === 0 ? (
-//             <p className="text-sm text-slate-500">No holidays configured.</p>
-//           ) : (
-//             holidays.map((h, i) => (
-//               <motion.div
-//                 key={h.id}
-//                 initial={{ opacity: 0, x: -8 }}
-//                 animate={{ opacity: 1, x: 0 }}
-//                 transition={{ duration: 0.2, delay: i * 0.03 }}
-//                 className="flex items-center justify-between rounded-lg border border-slate-100 px-4 py-3 hover:bg-slate-50/60"
-//               >
-//                 <div className="flex items-center gap-4">
-//                   <div className="flex h-12 w-12 flex-col items-center justify-center rounded-lg bg-slate-50 text-center">
-//                     <span className="text-[10px] font-medium uppercase text-slate-400">{format(parseISO(h.date), 'MMM')}</span>
-//                     <span className="text-lg font-bold text-slate-900">{format(parseISO(h.date), 'd')}</span>
-//                   </div>
-//                   <div>
-//                     <p className="text-sm font-medium text-slate-900">{h.name}</p>
-//                     <p className="text-xs text-slate-500">{h.description}</p>
-//                   </div>
-//                 </div>
-//                 <div className="flex items-center gap-3">
-//                   <span className="hidden text-sm text-slate-500 sm:block">{format(parseISO(h.date), 'EEEE')}</span>
-//                   <HolidayTypeBadge type={h.type} />
-//                   <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => openEdit(h)}>
-//                     <Edit className="h-4 w-4" />
-//                   </Button>
-//                   <Button size="icon" variant="ghost" className="h-8 w-8 text-rose-600" onClick={() => setDeleteTarget(h.id)}>
-//                     <Trash2 className="h-4 w-4" />
-//                   </Button>
-//                 </div>
-//               </motion.div>
-//             ))
-//           )}
-//         </div>
-//       </SectionCard>
-
-//       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-//         <DialogContent>
-//           <DialogHeader>
-//             <DialogTitle>{editTarget ? 'Edit Holiday' : 'Add Holiday'}</DialogTitle>
-//           </DialogHeader>
-//           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-//             <div className="space-y-2">
-//               <Label>Holiday Name</Label>
-//               <Input {...register('name')} />
-//               {errors.name && <p className="text-xs text-rose-500">{errors.name.message}</p>}
-//             </div>
-//             <div className="grid gap-4 sm:grid-cols-2">
-//               <div className="space-y-2">
-//                 <Label>Date</Label>
-//                 <Input type="date" {...register('date')} />
-//                 {errors.date && <p className="text-xs text-rose-500">{errors.date.message}</p>}
-//               </div>
-//               <div className="space-y-2">
-//                 <Label>Type</Label>
-//                 <Select value={selectedType} onValueChange={(v) => setValue('type', v as 'public' | 'company', { shouldValidate: true })}>
-//                   <SelectTrigger><SelectValue /></SelectTrigger>
-//                   <SelectContent>
-//                     <SelectItem value="public">Public</SelectItem>
-//                     <SelectItem value="company">Company</SelectItem>
-//                   </SelectContent>
-//                 </Select>
-//               </div>
-//             </div>
-//             <div className="space-y-2">
-//               <Label>Description</Label>
-//               <Textarea rows={2} {...register('description')} />
-//             </div>
-//             <DialogFooter>
-//               <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
-//               <Button type="submit" disabled={saving}>{saving ? 'Saving...' : 'Save'}</Button>
-//             </DialogFooter>
-//           </form>
-//         </DialogContent>
-//       </Dialog>
-
-//       <ConfirmDialog
-//         open={!!deleteTarget}
-//         onOpenChange={(o) => !o && setDeleteTarget(null)}
-//         title="Delete this holiday?"
-//         description="This will remove the holiday from the calendar."
-//         confirmLabel="Delete"
-//         destructive
-//         onConfirm={handleDelete}
-//       />
-//     </div>
-//   );
-// }
